@@ -365,6 +365,10 @@ func reconcile(c reconciler, key string) error {
 		runtime.HandleError(err)
 		return nil
 	}
+	if c.pjNamespace() != namespace {
+		//only reconcile within config prowjob namespace
+		return nil
+	}
 
 	var wantPipelineRun bool
 	pj, err := c.getProwJob(name)
