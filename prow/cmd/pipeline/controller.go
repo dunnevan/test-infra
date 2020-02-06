@@ -88,6 +88,11 @@ func (c *controller) pjNamespace() string {
 	return c.config().ProwJobNamespace
 }
 
+// podNamespace retruns the pod namespace from configuration
+func (c *controller) podNamespace() string {
+	return c.config().PodNamespace
+}
+
 // hasSynced returns true when every prowjob and pipeline informer has synced.
 func (c *controller) hasSynced() bool {
 	if !c.pjInformer.HasSynced() {
@@ -267,6 +272,7 @@ func (c *controller) enqueueKey(ctx string, obj interface{}) {
 }
 
 type reconciler interface {
+	podNamespace() string
 	getProwJob(name string) (*prowjobv1.ProwJob, error)
 	patchProwJob(pj *prowjobv1.ProwJob, newpj *prowjobv1.ProwJob) (*prowjobv1.ProwJob, error)
 	getPipelineRun(context, namespace, name string) (*pipelinev1alpha1.PipelineRun, error)
@@ -365,10 +371,6 @@ func reconcile(c reconciler, key string) error {
 		runtime.HandleError(err)
 		return nil
 	}
-	if c.pjNamespace() != namespace {
-		//only reconcile within config prowjob namespace
-		return nil
-	}
 
 	var wantPipelineRun bool
 	pj, err := c.getProwJob(name)
@@ -391,7 +393,8 @@ func reconcile(c reconciler, key string) error {
 	}
 
 	var havePipelineRun bool
-	p, err := c.getPipelineRun(ctx, namespace, name)
+	p, err := c.getPipelineRun(ctx, c.podNamespace(), name)
+
 	switch {
 	case apierrors.IsNotFound(err):
 		// Do not have a pipeline
