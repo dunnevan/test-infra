@@ -649,6 +649,8 @@ func makeResources(pj prowjobv1.ProwJob) (*pipelinev1alpha1.PipelineRun, []pipel
 		})
 	}
 
+	p.Spec.Params = append(p.Spec.Params, makePipelineGitParams(pj)...)
+
 	// Create and substitute git resources.
 	resourceMap := map[string]*pipelinev1alpha1.PipelineResource{}
 	for i, res := range p.Spec.Resources {
@@ -683,4 +685,101 @@ func makeResources(pj prowjobv1.ProwJob) (*pipelinev1alpha1.PipelineRun, []pipel
 	}
 
 	return &p, resources, nil
+}
+
+func makePipelineGitParams(pj prowjobv1.ProwJob) []pipelinev1alpha1.Param {
+
+	params := make([]pipelinev1alpha1.Param, 0, len(pj.Spec.ExtraRefs)+4)
+
+	for i, extra := range pj.Spec.ExtraRefs {
+		params = append(
+			params,
+			pipelinev1alpha1.Param{
+				Name: fmt.Sprintf("git-extra-ref-%d", i),
+				Value: pipelinev1alpha1.ArrayOrString{
+					Type:      pipelinev1alpha1.ParamTypeString,
+					StringVal: git(extra),
+				},
+			},
+			pipelinev1alpha1.Param{
+				Name: fmt.Sprintf("revision-extra-ref-%d", i),
+				Value: pipelinev1alpha1.ArrayOrString{
+					Type:      pipelinev1alpha1.ParamTypeString,
+					StringVal: revision(extra),
+				},
+			},
+		)
+	}
+
+	if ref := pj.Spec.Refs; ref != nil {
+		ref := *ref
+		params = append(
+			params,
+			pipelinev1alpha1.Param{
+				Name: "git-implicit-ref",
+				Value: pipelinev1alpha1.ArrayOrString{
+					Type:      pipelinev1alpha1.ParamTypeString,
+					StringVal: git(ref),
+				},
+			},
+			pipelinev1alpha1.Param{
+				Name: "revision-implicit-ref",
+				Value: pipelinev1alpha1.ArrayOrString{
+					Type:      pipelinev1alpha1.ParamTypeString,
+					StringVal: revision(ref),
+				},
+			},
+			pipelinev1alpha1.Param{
+				Name: "git",
+				Value: pipelinev1alpha1.ArrayOrString{
+					Type:      pipelinev1alpha1.ParamTypeString,
+					StringVal: git(ref),
+				},
+			},
+			pipelinev1alpha1.Param{
+				Name: "revision",
+				Value: pipelinev1alpha1.ArrayOrString{
+					Type:      pipelinev1alpha1.ParamTypeString,
+					StringVal: revision(ref),
+				},
+			},
+		)
+	}
+
+	return params
+}
+
+func git(refs prowjobv1.Refs) string {
+	// Pick source URL
+	var sourceURL string
+	switch {
+	case refs.CloneURI != "":
+		sourceURL = refs.CloneURI
+	case refs.RepoLink != "":
+		sourceURL = fmt.Sprintf("%s.git", refs.RepoLink)
+	default:
+		// TODO don't hardcode this
+		sourceURL = fmt.Sprintf("https://github.ibm.com/%s/%s.git", refs.Org, refs.Repo)
+	}
+
+	return sourceURL
+}
+
+func revision(refs prowjobv1.Refs) string {
+	// Pick revision
+	var revision string
+	switch {
+	case len(refs.Pulls) > 0:
+		if refs.Pulls[0].SHA != "" {
+			revision = refs.Pulls[0].SHA
+		} else {
+			revision = fmt.Sprintf("pull/%d/head", refs.Pulls[0].Number)
+		}
+	case refs.BaseSHA != "":
+		revision = refs.BaseSHA
+	default:
+		revision = refs.BaseRef
+	}
+
+	return revision
 }
