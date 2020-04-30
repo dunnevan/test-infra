@@ -56,6 +56,7 @@ func TestExpectedStatus(t *testing.T) {
 		blocks            []int
 		prowJobs          []runtime.Object
 		requiredContexts  []string
+		mergeConflicts    bool
 
 		state string
 		desc  string
@@ -468,6 +469,13 @@ func TestExpectedStatus(t *testing.T) {
 			state: github.StatusPending,
 			desc:  "Not mergeable. Retesting 2 jobs.",
 		},
+		{
+			name:           "mergeconflicts",
+			inPool:         true,
+			mergeConflicts: true,
+			state:          github.StatusError,
+			desc:           "Not mergeable. PR has a merge conflict.",
+		},
 	}
 
 	for _, tc := range testcases {
@@ -529,6 +537,9 @@ func TestExpectedStatus(t *testing.T) {
 					Title githubql.String
 				}{githubql.String(tc.milestone)}
 			}
+			if tc.mergeConflicts {
+				pr.Mergeable = githubql.MergeableStateConflicting
+			}
 			var pool map[string]PullRequest
 			if tc.inPool {
 				pool = map[string]PullRequest{"#0": {}}
@@ -542,12 +553,21 @@ func TestExpectedStatus(t *testing.T) {
 			}
 			blocks.Repo[blockers.OrgRepo{Org: "", Repo: ""}] = items
 
-			sc, err := newStatusController(logrus.NewEntry(logrus.StandardLogger()), nil, newFakeManager(tc.prowJobs...), nil, nil, nil, "")
+			ca := &config.Agent{}
+			ca.Set(&config.Config{})
+			mmc := newMergeChecker(ca.Config, &fgc{})
+
+			sc, err := newStatusController(logrus.NewEntry(logrus.StandardLogger()), nil, newFakeManager(tc.prowJobs...), nil, nil, nil, "", mmc)
 			if err != nil {
 				t.Fatalf("failed to get statusController: %v", err)
 			}
-			cc := &config.TideContextPolicy{RequiredContexts: tc.requiredContexts}
-			state, desc := sc.expectedStatus(sc.logger, queriesByRepo, &pr, pool, cc, blocks, tc.baseref)
+			ccg := func() (contextChecker, error) {
+				return &config.TideContextPolicy{RequiredContexts: tc.requiredContexts}, nil
+			}
+			state, desc, err := sc.expectedStatus(sc.logger, queriesByRepo, &pr, pool, ccg, blocks, tc.baseref)
+			if err != nil {
+				t.Fatalf("error calling expectedStatus(): %v", err)
+			}
 			if state != tc.state {
 				t.Errorf("Expected status state %q, but got %q.", string(tc.state), string(state))
 			}
@@ -666,7 +686,8 @@ func TestSetStatuses(t *testing.T) {
 			t.Fatalf("Failed to get log output before testing: %v", err)
 		}
 
-		sc, err := newStatusController(log, fc, newFakeManager(), nil, ca.Config, nil, "")
+		mmc := newMergeChecker(ca.Config, fc)
+		sc, err := newStatusController(log, fc, newFakeManager(), nil, ca.Config, nil, "", mmc)
 		if err != nil {
 			t.Fatalf("failed to get statusController: %v", err)
 		}
@@ -800,10 +821,9 @@ func TestTargetUrl(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		ca := &config.Agent{}
-		ca.Set(&config.Config{ProwConfig: config.ProwConfig{Tide: tc.config}})
 		log := logrus.WithField("controller", "status-update")
-		if actual, expected := targetURL(ca.Config, tc.pr, log), tc.expectedURL; actual != expected {
+		c := &config.Config{ProwConfig: config.ProwConfig{Tide: tc.config}}
+		if actual, expected := targetURL(c, tc.pr, log), tc.expectedURL; actual != expected {
 			t.Errorf("%s: expected target URL %s but got %s", tc.name, expected, actual)
 		}
 	}
@@ -888,13 +908,16 @@ func TestSetStatusRespectsRequiredContexts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get log output before testing: %v", err)
 	}
+
+	ca := &config.Agent{}
+	ca.Set(&config.Config{})
+
 	sc := &statusController{
-		logger: log,
-		ghc:    fghc,
-		config: func() *config.Config {
-			return &config.Config{}
-		},
-		pjClient: fakectrlruntimeclient.NewFakeClient(),
+		logger:       log,
+		ghc:          fghc,
+		config:       ca.Config,
+		pjClient:     fakectrlruntimeclient.NewFakeClient(),
+		mergeChecker: newMergeChecker(ca.Config, fghc),
 	}
 	pool := map[string]PullRequest{prKey(&pr): pr}
 	sc.setStatuses([]PullRequest{pr}, pool, blockers.Blockers{}, nil, requiredContexts)

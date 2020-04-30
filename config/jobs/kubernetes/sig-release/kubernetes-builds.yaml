@@ -7,7 +7,7 @@ presubmits:
       preset-dind-enabled: "true"
     spec:
       containers:
-      - image: gcr.io/k8s-testimages/bootstrap:v20200124-81ee414
+      - image: gcr.io/k8s-testimages/bootstrap:v20200428-cdaab98
         args:
         - "--job=$(JOB_NAME)"
         - "--repo=k8s.io/$(REPO_NAME)=$(PULL_REFS)"
@@ -37,7 +37,7 @@ periodics:
     preset-dind-enabled: "true"
   spec:
     containers:
-    - image: gcr.io/k8s-testimages/bootstrap:v20200124-81ee414
+    - image: gcr.io/k8s-testimages/bootstrap:v20200428-cdaab98
       args:
       - --repo=k8s.io/kubernetes
       - --repo=k8s.io/release
@@ -47,7 +47,6 @@ periodics:
       - --
       - --allow-dup
       - --extra-publish-file=k8s-master
-      - --hyperkube
       - --registry=gcr.io/kubernetes-ci-images
       # docker-in-docker needs privileged mode
       securityContext:
@@ -56,6 +55,9 @@ periodics:
         requests:
           cpu: 4
           memory: "8Gi"
+  rerun_auth_config:
+    github_team_ids:
+      - 2241179 # release-managers
   annotations:
     fork-per-release: "true"
     fork-per-release-replacements: "--extra-publish-file=k8s-master -> --extra-publish-file=k8s-beta"
@@ -71,7 +73,7 @@ periodics:
     preset-dind-enabled: "true"
   spec:
     containers:
-    - image: gcr.io/k8s-testimages/bootstrap:v20200124-81ee414
+    - image: gcr.io/k8s-testimages/bootstrap:v20200428-cdaab98
       args:
       - --repo=k8s.io/kubernetes
       - --repo=k8s.io/release
@@ -88,6 +90,9 @@ periodics:
         requests:
           cpu: 4
           memory: "8Gi"
+  rerun_auth_config:
+    github_team_ids:
+      - 2241179 # release-managers
   annotations:
     testgrid-dashboards: sig-release-master-blocking, google-unit
     testgrid-tab-name: build-master-fast
@@ -99,7 +104,7 @@ periodics:
   decorate: true
   spec:
     containers:
-    - image: gcr.io/k8s-staging-release-test/kubepkg:latest
+    - image: gcr.io/k8s-staging-releng/kubepkg:latest
       imagePullPolicy: Always
       command:
       - ./kubepkg
@@ -109,9 +114,12 @@ periodics:
         requests:
           cpu: 4
           memory: "8Gi"
+  rerun_auth_config:
+    github_team_ids:
+      - 2241179 # release-managers
   annotations:
     testgrid-alert-email: release-managers@kubernetes.io
-    testgrid-dashboards: sig-release-master-informing
+    testgrid-dashboards: sig-release-releng-informing
     testgrid-tab-name: build-packages-debs
 
 - interval: 4h
@@ -119,7 +127,7 @@ periodics:
   decorate: true
   spec:
     containers:
-    - image: gcr.io/k8s-staging-release-test/kubepkg-rpm:latest
+    - image: gcr.io/k8s-staging-releng/kubepkg-rpm:latest
       imagePullPolicy: Always
       command:
       - ./kubepkg
@@ -129,7 +137,10 @@ periodics:
         requests:
           cpu: 4
           memory: "8Gi"
+  rerun_auth_config:
+    github_team_ids:
+      - 2241179 # release-managers
   annotations:
     testgrid-alert-email: release-managers@kubernetes.io
-    testgrid-dashboards: sig-release-master-informing
+    testgrid-dashboards: sig-release-releng-informing
     testgrid-tab-name: build-packages-rpms

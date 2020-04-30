@@ -100,19 +100,18 @@ func TestReportTemplate(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		var b bytes.Buffer
-		if err := c.Plank.ReportTemplate.Execute(&b, &prowapi.ProwJob{
-			Spec: prowapi.ProwJobSpec{
-				Refs: &prowapi.Refs{
-					Org:  tc.org,
-					Repo: tc.repo,
-					Pulls: []prowapi.Pull{
-						{
-							Number: tc.number,
-						},
-					},
+		refs := &prowapi.Refs{
+			Org:  tc.org,
+			Repo: tc.repo,
+			Pulls: []prowapi.Pull{
+				{
+					Number: tc.number,
 				},
 			},
-		}); err != nil {
+		}
+
+		reportTemplate := c.Plank.ReportTemplateForRepo(refs)
+		if err := reportTemplate.Execute(&b, &prowapi.ProwJob{Spec: prowapi.ProwJobSpec{Refs: refs}}); err != nil {
 			t.Errorf("Error executing template: %v", err)
 			continue
 		}
@@ -313,7 +312,7 @@ func TestTrustedJobs(t *testing.T) {
 	// that uses a foo-trusted cluster
 	const trusted = "test-infra-trusted"
 	trustedPath := path.Join(*jobConfigPath, "kubernetes", "test-infra", "test-infra-trusted.yaml")
-	trustedDir := path.Join(*jobConfigPath, "image-pushing") + "/"
+	imagePushingDir := path.Join(*jobConfigPath, "image-pushing") + "/"
 
 	// Presubmits may not use trusted clusters.
 	for _, pre := range c.AllStaticPresubmits(nil) {
@@ -327,7 +326,12 @@ func TestTrustedJobs(t *testing.T) {
 		if post.Cluster != trusted {
 			continue
 		}
-		if post.SourcePath != trustedPath && !strings.HasPrefix(post.SourcePath, trustedDir) {
+		if strings.HasPrefix(post.SourcePath, imagePushingDir) {
+			if err := validateImagePushingImage(post.Spec); err != nil {
+				t.Errorf("%s defined in %s %s", post.Name, post.SourcePath, err)
+			}
+		}
+		if post.SourcePath != trustedPath && !strings.HasPrefix(post.SourcePath, imagePushingDir) {
 			t.Errorf("%s defined in %s may not run in trusted cluster", post.Name, post.SourcePath)
 		}
 	}
@@ -337,10 +341,27 @@ func TestTrustedJobs(t *testing.T) {
 		if per.Cluster != trusted {
 			continue
 		}
-		if per.SourcePath != trustedPath && !strings.HasPrefix(per.SourcePath, trustedDir) {
+		if strings.HasPrefix(per.SourcePath, imagePushingDir) {
+			if err := validateImagePushingImage(per.Spec); err != nil {
+				t.Errorf("%s defined in %s %s", per.Name, per.SourcePath, err)
+			}
+		}
+		if per.SourcePath != trustedPath && !strings.HasPrefix(per.SourcePath, imagePushingDir) {
 			t.Errorf("%s defined in %s may not run in trusted cluster", per.Name, per.SourcePath)
 		}
 	}
+}
+
+func validateImagePushingImage(spec *coreapi.PodSpec) error {
+	const imagePushingImage = "gcr.io/k8s-testimages/image-builder"
+
+	for _, c := range spec.Containers {
+		if !strings.HasPrefix(c.Image, imagePushingImage+":") {
+			return fmt.Errorf("must use a pinned version of %s", imagePushingImage)
+		}
+	}
+
+	return nil
 }
 
 // Unit test only postsubmit/periodic jobs in config/jobs/<org>/<project>/<project>-trusted.yaml can use

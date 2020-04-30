@@ -1,22 +1,19 @@
 presubmits:
   kubernetes-sigs/azurefile-csi-driver:
   - name: pull-azurefile-csi-driver-verify
+    decorate: true
     always_run: true
+    path_alias: sigs.k8s.io/azurefile-csi-driver
     branches:
     - master
     labels:
       preset-service-account: "true"
     spec:
       containers:
-      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200204-8eefa86-master
+      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master
+        command:
+        - runner.sh
         args:
-        - "--job=$(JOB_NAME)"
-        - "--root=/go/src"
-        - "--service-account=/etc/service-account/service-account.json"
-        - "--repo=sigs.k8s.io/$(REPO_NAME)=$(PULL_REFS)"
-        - "--upload=gs://kubernetes-jenkins/pr-logs"
-        - "--scenario=execute"
-        - --
         - make
         - verify
     annotations:
@@ -25,22 +22,19 @@ presubmits:
       description: "Run code verification tests for Azure File CSI driver."
       testgrid-num-columns-recent: '30'
   - name: pull-azurefile-csi-driver-unit
+    decorate: true
     always_run: true
+    path_alias: sigs.k8s.io/azurefile-csi-driver
     branches:
     - master
     labels:
       preset-service-account: "true"
     spec:
       containers:
-      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200204-8eefa86-master
+      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master
+        command:
+        - runner.sh
         args:
-        - "--job=$(JOB_NAME)"
-        - "--root=/go/src"
-        - "--service-account=/etc/service-account/service-account.json"
-        - "--repo=sigs.k8s.io/$(REPO_NAME)=$(PULL_REFS)"
-        - "--upload=gs://kubernetes-jenkins/pr-logs"
-        - "--scenario=execute"
-        - --
         - make
         - unit-test
     annotations:
@@ -49,7 +43,9 @@ presubmits:
       description: "Run unit tests for Azure File CSI driver."
       testgrid-num-columns-recent: '30'
   - name: pull-azurefile-csi-driver-sanity
+    decorate: true
     always_run: true
+    path_alias: sigs.k8s.io/azurefile-csi-driver
     branches:
     - master
     labels:
@@ -57,15 +53,10 @@ presubmits:
       preset-azure-cred: "true"
     spec:
       containers:
-      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200204-8eefa86-master
+      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master
+        command:
+        - runner.sh
         args:
-        - "--job=$(JOB_NAME)"
-        - "--root=/go/src"
-        - "--service-account=/etc/service-account/service-account.json"
-        - "--repo=sigs.k8s.io/$(REPO_NAME)=$(PULL_REFS)"
-        - "--upload=gs://kubernetes-jenkins/pr-logs"
-        - "--scenario=execute"
-        - --
         - make
         - sanity-test
         securityContext:
@@ -76,7 +67,9 @@ presubmits:
       description: "Run sanity tests for Azure File CSI driver."
       testgrid-num-columns-recent: '30'
   - name: pull-azurefile-csi-driver-integration
+    decorate: true
     always_run: true
+    path_alias: sigs.k8s.io/azurefile-csi-driver
     branches:
     - master
     labels:
@@ -84,15 +77,10 @@ presubmits:
       preset-azure-cred: "true"
     spec:
       containers:
-      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200204-8eefa86-master
+      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master
+        command:
+        - runner.sh
         args:
-        - "--job=$(JOB_NAME)"
-        - "--root=/go/src"
-        - "--service-account=/etc/service-account/service-account.json"
-        - "--repo=sigs.k8s.io/$(REPO_NAME)=$(PULL_REFS)"
-        - "--upload=gs://kubernetes-jenkins/pr-logs"
-        - "--scenario=execute"
-        - --
         - make
         - integration-test
         securityContext:
@@ -103,46 +91,45 @@ presubmits:
       description: "Run integration tests for Azure File CSI driver."
       testgrid-num-columns-recent: '30'
   - name: pull-azurefile-csi-driver-e2e
+    decorate: true
     always_run: true
+    path_alias: sigs.k8s.io/azurefile-csi-driver
     branches:
     - master
     labels:
       preset-service-account: "true"
       preset-azure-cred: "true"
       preset-dind-enabled: "true"
+    extra_refs:
+    - org: kubernetes
+      repo: kubernetes
+      base_ref: master
+      path_alias: k8s.io/kubernetes
+      workdir: true
     spec:
       containers:
-      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200204-8eefa86-master
+      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master
+        command:
+        - runner.sh
+        - kubetest
         args:
-        - "--job=$(JOB_NAME)"
-        - "--root=/go/src"
-        - "--service-account=/etc/service-account/service-account.json"
-        - "--repo=k8s.io/kubernetes"
-        - "--repo=sigs.k8s.io/$(REPO_NAME)=$(PULL_REFS)"
-        - "--upload=gs://kubernetes-jenkins/pr-logs"
-        - "--scenario=kubernetes_e2e"
-        - "--timeout=450"
-        - --
-        - "--gce-ssh="
-        - "--test=true"
-        - "--up=true"
-        - "--down=true"
-        - "--deployment=aksengine"
-        - "--build=bazel"
-        - "--provider=skeleton"
-        - "--ginkgo-parallel=1"
-        - "--aksengine-agentpoolcount=2"
-        - "--aksengine-admin-username=azureuser"
-        - "--aksengine-creds=$AZURE_CREDENTIALS"
-        - "--aksengine-orchestratorRelease=1.16"
-        - "--aksengine-mastervmsize=Standard_DS2_v2"
-        - "--aksengine-agentvmsize=Standard_D4s_v3"
-        - "--aksengine-location=eastus2"
-        - "--aksengine-public-key=$AZURE_SSH_PUBLIC_KEY_FILE"
-        - "--aksengine-template-url=https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-azure/master/tests/k8s-azure/manifest/linux.json"
-        - "--aksengine-download-url=https://github.com/Azure/aks-engine/releases/download/v0.39.1/aks-engine-v0.39.1-linux-amd64.tar.gz"
-        - "--test-azure-file-csi-driver=True"
-        - "--timeout=420m"
+        # Generic e2e test args
+        - --test
+        - --up
+        - --down
+        - --dump=$(ARTIFACTS)
+        # Azure-specific test args
+        - --provider=skeleton
+        - --deployment=aksengine
+        - --aksengine-admin-username=azureuser
+        - --aksengine-creds=$(AZURE_CREDENTIALS)
+        - --aksengine-orchestratorRelease=1.17
+        - --aksengine-location=eastus2
+        - --aksengine-public-key=$(AZURE_SSH_PUBLIC_KEY_FILE)
+        - --aksengine-template-url=https://raw.githubusercontent.com/kubernetes-sigs/azurefile-csi-driver/master/test/e2e/manifest/linux.json
+        - --aksengine-download-url=https://github.com/Azure/aks-engine/releases/download/v0.46.0/aks-engine-v0.46.0-linux-amd64.tar.gz
+        # Specific test args
+        - --test-azure-file-csi-driver
         securityContext:
           privileged: true
     annotations:
@@ -150,23 +137,121 @@ presubmits:
       testgrid-tab-name: pr-azurefile-csi-driver-e2e
       description: "Run E2E tests for Azure File CSI driver."
       testgrid-num-columns-recent: '30'
-  - name: pull-azurefile-csi-driver-windows-build
+  - name: pull-azurefile-csi-driver-e2e-vmss
+    decorate: true
     always_run: true
+    path_alias: sigs.k8s.io/azurefile-csi-driver
+    branches:
+    - master
+    labels:
+      preset-service-account: "true"
+      preset-azure-cred: "true"
+      preset-dind-enabled: "true"
+    extra_refs:
+    - org: kubernetes
+      repo: kubernetes
+      base_ref: master
+      path_alias: k8s.io/kubernetes
+      workdir: true
+    spec:
+      containers:
+      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master
+        command:
+        - runner.sh
+        - kubetest
+        args:
+        # Generic e2e test args
+        - --test
+        - --up
+        - --down
+        - --dump=$(ARTIFACTS)
+        # Azure-specific test args
+        - --provider=skeleton
+        - --deployment=aksengine
+        - --aksengine-admin-username=azureuser
+        - --aksengine-creds=$(AZURE_CREDENTIALS)
+        - --aksengine-orchestratorRelease=1.17
+        - --aksengine-location=eastus2
+        - --aksengine-public-key=$(AZURE_SSH_PUBLIC_KEY_FILE)
+        - --aksengine-template-url=https://raw.githubusercontent.com/kubernetes-sigs/azurefile-csi-driver/master/test/e2e/manifest/linux-vmss.json
+        - --aksengine-download-url=https://github.com/Azure/aks-engine/releases/download/v0.46.0/aks-engine-v0.46.0-linux-amd64.tar.gz
+        # Specific test args
+        - --test-azure-file-csi-driver
+        securityContext:
+          privileged: true
+    annotations:
+      testgrid-dashboards: provider-azure-azurefile-csi-driver, provider-azure-presubmit
+      testgrid-tab-name: pr-azurefile-csi-driver-e2e-vmss
+      description: "Run E2E tests on a VMSS-based cluster for Azure File CSI driver."
+      testgrid-num-columns-recent: '30'
+  - name: pull-azurefile-csi-driver-e2e-windows
+    decorate: true
+    always_run: true
+    path_alias: sigs.k8s.io/azurefile-csi-driver
+    branches:
+    - master
+    labels:
+      preset-service-account: "true"
+      preset-azure-cred: "true"
+      preset-azure-windows: "true"
+      preset-k8s-ssh: "true"
+      preset-dind-enabled: "true"
+    extra_refs:
+    - org: kubernetes
+      repo: kubernetes
+      base_ref: master
+      path_alias: k8s.io/kubernetes
+      workdir: true
+    spec:
+      containers:
+      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master
+        command:
+        - runner.sh
+        - kubetest
+        args:
+        # Generic e2e test args
+        - --test
+        - --up
+        - --down
+        - --build=quick
+        - --dump=$(ARTIFACTS)
+        # Azure-specific test args
+        - --provider=skeleton
+        - --deployment=aksengine
+        - --aksengine-admin-username=azureuser
+        - --aksengine-creds=$(AZURE_CREDENTIALS)
+        - --aksengine-orchestratorRelease=1.18
+        - --aksengine-location=westus2
+        - --aksengine-public-key=$(K8S_SSH_PUBLIC_KEY_PATH)
+        - --aksengine-private-key=$(K8S_SSH_PRIVATE_KEY_PATH)
+        - --aksengine-template-url=https://raw.githubusercontent.com/kubernetes-sigs/windows-testing/master/job-templates/kubernetes_csi_proxy.json
+        - --aksengine-download-url=https://github.com/Azure/aks-engine/releases/download/v0.48.0/aks-engine-v0.48.0-linux-amd64.tar.gz
+        # Specific test args
+        - --test-azure-file-csi-driver
+        securityContext:
+          privileged: true
+        env:
+          - name: TEST_WINDOWS
+            value: "true"
+    annotations:
+      testgrid-dashboards: provider-azure-azurefile-csi-driver, provider-azure-presubmit
+      testgrid-tab-name: pr-azurefile-csi-driver-e2e-windows
+      description: "Run E2E tests on a Windows cluster for Azure File CSI driver."
+      testgrid-num-columns-recent: '30'
+  - name: pull-azurefile-csi-driver-windows-build
+    decorate: true
+    always_run: true
+    path_alias: sigs.k8s.io/azurefile-csi-driver
     branches:
     - master
     labels:
       preset-service-account: "true"
     spec:
       containers:
-      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200204-8eefa86-master
+      - image: gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master
+        command:
+        - runner.sh
         args:
-        - "--job=$(JOB_NAME)"
-        - "--root=/go/src"
-        - "--service-account=/etc/service-account/service-account.json"
-        - "--repo=sigs.k8s.io/$(REPO_NAME)=$(PULL_REFS)"
-        - "--upload=gs://kubernetes-jenkins/pr-logs"
-        - "--scenario=execute"
-        - --
         - make
         - azurefile-windows
     annotations:

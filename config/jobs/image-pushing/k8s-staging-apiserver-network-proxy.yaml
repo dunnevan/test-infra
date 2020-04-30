@@ -10,8 +10,9 @@ postsubmits:
       branches:
         - ^master$
       spec:
+        serviceAccountName: deployer # TODO(fejta): use pusher
         containers:
-          - image: gcr.io/k8s-testimages/image-builder:v20200114-6d2c483
+          - image: gcr.io/k8s-testimages/image-builder:v20200422-c760048
             command:
               - /run.sh
             args:
@@ -20,13 +21,3 @@ postsubmits:
               - --scratch-bucket=gs://k8s-staging-kas-network-proxy-gcb
               - --env-passthrough=PULL_BASE_REF
               - .
-            env:
-              - name: GOOGLE_APPLICATION_CREDENTIALS
-                value: /creds/service-account.json
-            volumeMounts:
-              - name: creds
-                mountPath: /creds
-        volumes:
-          - name: creds
-            secret:
-              secretName: deployer-service-account

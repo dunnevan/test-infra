@@ -301,23 +301,158 @@ periodics:
       - "./..."`,
 		},
 		{
+			name: "with bad default",
+			rawConfig: `
+plank:
+  default_decoration_configs:
+    '*':
+      timeout: 2h
+      grace_period: 15s
+      utility_images:
+      # clonerefs: "clonerefs:default"
+        initupload: "initupload:default"
+        entrypoint: "entrypoint:default"
+        sidecar: "sidecar:default"
+      gcs_configuration:
+        bucket: "default-bucket"
+        path_strategy: "legacy"
+        default_org: "kubernetes"
+        default_repo: "kubernetes"
+      gcs_credentials_secret: "default-service-account"
+
+periodics:
+- name: kubernetes-defaulted-decoration
+  interval: 1h
+  decorate: true
+  spec:
+    containers:
+    - image: golang:latest
+      args:
+      - "test"
+      - "./..."`,
+			expectError: true,
+		},
+		{
+			name: "repo should inherit from default config",
+			rawConfig: `
+plank:
+  default_decoration_configs:
+    '*':
+      timeout: 2h
+      grace_period: 15s
+      utility_images:
+        clonerefs: "clonerefs:default"
+        initupload: "initupload:default"
+        entrypoint: "entrypoint:default"
+        sidecar: "sidecar:default"
+      gcs_configuration:
+        bucket: "default-bucket"
+        path_strategy: "legacy"
+        default_org: "kubernetes"
+        default_repo: "kubernetes"
+      gcs_credentials_secret: "default-service-account"
+    'org/inherit':
+      timeout: 2h
+      grace_period: 15s
+      utility_images: {}
+      gcs_configuration:
+        bucket: "default-bucket"
+        path_strategy: "legacy"
+        default_org: "kubernetes"
+        default_repo: "kubernetes"
+      gcs_credentials_secret: "default-service-account"
+periodics:
+- name: kubernetes-defaulted-decoration
+  interval: 1h
+  decorate: true
+  spec:
+    containers:
+    - image: golang:latest
+      args:
+      - "test"
+      - "./..."`,
+		},
+		{
+			name: "with default and repo, use default",
+			rawConfig: `
+plank:
+  default_decoration_configs:
+    '*':
+      timeout: 2h
+      grace_period: 15s
+      utility_images:
+        clonerefs: "clonerefs:default"
+        initupload: "initupload:default"
+        entrypoint: "entrypoint:default"
+        sidecar: "sidecar:default"
+      gcs_configuration:
+        bucket: "default-bucket"
+        path_strategy: "legacy"
+        default_org: "kubernetes"
+        default_repo: "kubernetes"
+      gcs_credentials_secret: "default-service-account"
+    'random/repo':
+      timeout: 2h
+      grace_period: 15s
+      utility_images:
+        clonerefs: "clonerefs:random"
+        initupload: "initupload:random"
+        entrypoint: "entrypoint:random"
+        sidecar: "sidecar:org"
+      gcs_configuration:
+        bucket: "ignore"
+        path_strategy: "legacy"
+        default_org: "random"
+        default_repo: "repo"
+      gcs_credentials_secret: "random-service-account"
+
+periodics:
+- name: kubernetes-defaulted-decoration
+  interval: 1h
+  decorate: true
+  spec:
+    containers:
+    - image: golang:latest
+      args:
+      - "test"
+      - "./..."`,
+			expected: &prowapi.DecorationConfig{
+				Timeout:     &prowapi.Duration{Duration: 2 * time.Hour},
+				GracePeriod: &prowapi.Duration{Duration: 15 * time.Second},
+				UtilityImages: &prowapi.UtilityImages{
+					CloneRefs:  "clonerefs:default",
+					InitUpload: "initupload:default",
+					Entrypoint: "entrypoint:default",
+					Sidecar:    "sidecar:default",
+				},
+				GCSConfiguration: &prowapi.GCSConfiguration{
+					Bucket:       "default-bucket",
+					PathStrategy: prowapi.PathStrategyLegacy,
+					DefaultOrg:   "kubernetes",
+					DefaultRepo:  "kubernetes",
+				},
+				GCSCredentialsSecret: "default-service-account",
+			},
+		},
+		{
 			name: "with default, no explicit decorate",
 			rawConfig: `
 plank:
-  default_decoration_config:
-    timeout: 2h
-    grace_period: 15s
-    utility_images:
-      clonerefs: "clonerefs:default"
-      initupload: "initupload:default"
-      entrypoint: "entrypoint:default"
-      sidecar: "sidecar:default"
-    gcs_configuration:
-      bucket: "default-bucket"
-      path_strategy: "legacy"
-      default_org: "kubernetes"
-      default_repo: "kubernetes"
-    gcs_credentials_secret: "default-service-account"
+  default_decoration_configs:
+    '*':
+      timeout: 2h
+      grace_period: 15s
+      utility_images:
+        clonerefs: "clonerefs:default"
+        initupload: "initupload:default"
+        entrypoint: "entrypoint:default"
+        sidecar: "sidecar:default"
+      gcs_configuration:
+        bucket: "default-bucket"
+        path_strategy: "legacy"
+        default_org: "kubernetes"
+        default_repo: "kubernetes"
+      gcs_credentials_secret: "default-service-account"
 
 periodics:
 - name: kubernetes-defaulted-decoration
@@ -351,20 +486,21 @@ periodics:
 			name: "with default, has explicit decorate",
 			rawConfig: `
 plank:
-  default_decoration_config:
-    timeout: 2h
-    grace_period: 15s
-    utility_images:
-      clonerefs: "clonerefs:default"
-      initupload: "initupload:default"
-      entrypoint: "entrypoint:default"
-      sidecar: "sidecar:default"
-    gcs_configuration:
-      bucket: "default-bucket"
-      path_strategy: "legacy"
-      default_org: "kubernetes"
-      default_repo: "kubernetes"
-    gcs_credentials_secret: "default-service-account"
+  default_decoration_configs:
+    '*':
+      timeout: 2h
+      grace_period: 15s
+      utility_images:
+        clonerefs: "clonerefs:default"
+        initupload: "initupload:default"
+        entrypoint: "entrypoint:default"
+        sidecar: "sidecar:default"
+      gcs_configuration:
+        bucket: "default-bucket"
+        path_strategy: "legacy"
+        default_org: "kubernetes"
+        default_repo: "kubernetes"
+      gcs_credentials_secret: "default-service-account"
 
 periodics:
 - name: kubernetes-defaulted-decoration
@@ -438,7 +574,6 @@ periodics:
 			}
 		}
 	}
-
 }
 
 func TestValidateAgent(t *testing.T) {
@@ -638,7 +773,7 @@ func TestValidatePodSpec(t *testing.T) {
 			},
 		},
 		{
-			name: "reject conflicting mount paths (decorate in user)",
+			name: "accept conflicting mount path parent",
 			spec: func(s *v1.PodSpec) {
 				s.Containers[0].VolumeMounts = append(s.Containers[0].VolumeMounts, v1.VolumeMount{
 					Name:      "foo",
@@ -647,7 +782,7 @@ func TestValidatePodSpec(t *testing.T) {
 			},
 		},
 		{
-			name: "reject conflicting mount paths (user in decorate)",
+			name: "accept conflicting mount path child",
 			spec: func(s *v1.PodSpec) {
 				s.Containers[0].VolumeMounts = append(s.Containers[0].VolumeMounts, v1.VolumeMount{
 					Name:      "foo",
@@ -659,6 +794,26 @@ func TestValidatePodSpec(t *testing.T) {
 			name: "reject reserved volume",
 			spec: func(s *v1.PodSpec) {
 				s.Volumes = append(s.Volumes, v1.Volume{Name: decorate.VolumeMounts()[0]})
+			},
+		},
+		{
+			name: "reject duplicate env",
+			spec: func(s *v1.PodSpec) {
+				s.Containers[0].Env = append(s.Containers[0].Env, v1.EnvVar{Name: "foo", Value: "bar"})
+				s.Containers[0].Env = append(s.Containers[0].Env, v1.EnvVar{Name: "foo", Value: "baz"})
+			},
+		},
+		{
+			name: "reject duplicate volume",
+			spec: func(s *v1.PodSpec) {
+				s.Volumes = append(s.Volumes, v1.Volume{Name: "foo"})
+				s.Volumes = append(s.Volumes, v1.Volume{Name: "foo"})
+			},
+		},
+		{
+			name: "reject undefined volume reference",
+			spec: func(s *v1.PodSpec) {
+				s.Containers[0].VolumeMounts = append(s.Containers[0].VolumeMounts, v1.VolumeMount{Name: "foo", MountPath: "/not-used-by-decoration-utils"})
 			},
 		},
 	}
@@ -715,7 +870,7 @@ func TestValidatePipelineRunSpec(t *testing.T) {
 			spec: func(s *pipelinev1alpha1.PipelineRunSpec) {
 				s.Resources = append(s.Resources, pipelinev1alpha1.PipelineResourceBinding{
 					Name:        "git ref",
-					ResourceRef: pipelinev1alpha1.PipelineResourceRef{Name: "PROW_IMPLICIT_GIT_REF"},
+					ResourceRef: &pipelinev1alpha1.PipelineResourceRef{Name: "PROW_IMPLICIT_GIT_REF"},
 				})
 			},
 			pass: false,
@@ -726,7 +881,7 @@ func TestValidatePipelineRunSpec(t *testing.T) {
 			spec: func(s *pipelinev1alpha1.PipelineRunSpec) {
 				s.Resources = append(s.Resources, pipelinev1alpha1.PipelineResourceBinding{
 					Name:        "git ref",
-					ResourceRef: pipelinev1alpha1.PipelineResourceRef{Name: "PROW_IMPLICIT_GIT_REF"},
+					ResourceRef: &pipelinev1alpha1.PipelineResourceRef{Name: "PROW_IMPLICIT_GIT_REF"},
 				})
 			},
 			pass: true,
@@ -737,7 +892,7 @@ func TestValidatePipelineRunSpec(t *testing.T) {
 			spec: func(s *pipelinev1alpha1.PipelineRunSpec) {
 				s.Resources = append(s.Resources, pipelinev1alpha1.PipelineResourceBinding{
 					Name:        "git ref",
-					ResourceRef: pipelinev1alpha1.PipelineResourceRef{Name: "PROW_IMPLICIT_GIT_REF"},
+					ResourceRef: &pipelinev1alpha1.PipelineResourceRef{Name: "PROW_IMPLICIT_GIT_REF"},
 				})
 			},
 			pass: true,
@@ -747,7 +902,7 @@ func TestValidatePipelineRunSpec(t *testing.T) {
 			spec: func(s *pipelinev1alpha1.PipelineRunSpec) {
 				s.Resources = append(s.Resources, pipelinev1alpha1.PipelineResourceBinding{
 					Name:        "git ref",
-					ResourceRef: pipelinev1alpha1.PipelineResourceRef{Name: "PROW_EXTRA_GIT_REF_0"},
+					ResourceRef: &pipelinev1alpha1.PipelineResourceRef{Name: "PROW_EXTRA_GIT_REF_0"},
 				})
 			},
 			pass: false,
@@ -757,7 +912,7 @@ func TestValidatePipelineRunSpec(t *testing.T) {
 			spec: func(s *pipelinev1alpha1.PipelineRunSpec) {
 				s.Resources = append(s.Resources, pipelinev1alpha1.PipelineResourceBinding{
 					Name:        "git ref",
-					ResourceRef: pipelinev1alpha1.PipelineResourceRef{Name: "PROW_EXTRA_GIT_REF_0"},
+					ResourceRef: &pipelinev1alpha1.PipelineResourceRef{Name: "PROW_EXTRA_GIT_REF_0"},
 				})
 			},
 			extraRefs: []prowapi.Refs{{Org: "o", Repo: "r"}},
@@ -768,7 +923,7 @@ func TestValidatePipelineRunSpec(t *testing.T) {
 			spec: func(s *pipelinev1alpha1.PipelineRunSpec) {
 				s.Resources = append(s.Resources, pipelinev1alpha1.PipelineResourceBinding{
 					Name:        "git ref",
-					ResourceRef: pipelinev1alpha1.PipelineResourceRef{Name: "PROW_EXTRA_GIT_REF_1"},
+					ResourceRef: &pipelinev1alpha1.PipelineResourceRef{Name: "PROW_EXTRA_GIT_REF_1"},
 				})
 			},
 			extraRefs: []prowapi.Refs{{Org: "o", Repo: "r"}},
@@ -784,7 +939,7 @@ func TestValidatePipelineRunSpec(t *testing.T) {
 			spec: func(s *pipelinev1alpha1.PipelineRunSpec) {
 				s.Resources = append(s.Resources, pipelinev1alpha1.PipelineResourceBinding{
 					Name:        "git ref",
-					ResourceRef: pipelinev1alpha1.PipelineResourceRef{Name: "some-other-ref"},
+					ResourceRef: &pipelinev1alpha1.PipelineResourceRef{Name: "some-other-ref"},
 				})
 			},
 			pass: true,
@@ -794,7 +949,7 @@ func TestValidatePipelineRunSpec(t *testing.T) {
 			spec: func(s *pipelinev1alpha1.PipelineRunSpec) {
 				s.Resources = append(s.Resources, pipelinev1alpha1.PipelineResourceBinding{
 					Name:        "git ref",
-					ResourceRef: pipelinev1alpha1.PipelineResourceRef{Name: "PROW_EXTRA_GIT_REF_000"},
+					ResourceRef: &pipelinev1alpha1.PipelineResourceRef{Name: "PROW_EXTRA_GIT_REF_000"},
 				})
 			},
 			extraRefs: []prowapi.Refs{{Org: "o", Repo: "r"}},
@@ -2183,6 +2338,72 @@ deck:
 	}
 }
 
+func TestRerunAuthConfigsGetRerunAuthConfig(t *testing.T) {
+	var testCases = []struct {
+		name     string
+		configs  RerunAuthConfigs
+		refs     *prowapi.Refs
+		expected prowapi.RerunAuthConfig
+	}{
+		{
+			name:     "default to an empty config",
+			configs:  RerunAuthConfigs{},
+			refs:     &prowapi.Refs{Org: "my-default-org", Repo: "my-default-repo"},
+			expected: prowapi.RerunAuthConfig{},
+		},
+		{
+			name:     "unknown org or org/repo return wildcard",
+			configs:  RerunAuthConfigs{"*": prowapi.RerunAuthConfig{GitHubUsers: []string{"clarketm"}}},
+			refs:     &prowapi.Refs{Org: "my-default-org", Repo: "my-default-repo"},
+			expected: prowapi.RerunAuthConfig{GitHubUsers: []string{"clarketm"}},
+		},
+		{
+			name:     "no refs return wildcard",
+			configs:  RerunAuthConfigs{"*": prowapi.RerunAuthConfig{GitHubUsers: []string{"leonardo"}}},
+			refs:     nil,
+			expected: prowapi.RerunAuthConfig{GitHubUsers: []string{"leonardo"}},
+		},
+		{
+			name: "use org if defined",
+			configs: RerunAuthConfigs{
+				"*":                prowapi.RerunAuthConfig{GitHubUsers: []string{"clarketm"}},
+				"istio":            prowapi.RerunAuthConfig{GitHubUsers: []string{"scoobydoo"}},
+				"istio/test-infra": prowapi.RerunAuthConfig{GitHubUsers: []string{"billybob"}},
+			},
+			refs:     &prowapi.Refs{Org: "istio", Repo: "istio"},
+			expected: prowapi.RerunAuthConfig{GitHubUsers: []string{"scoobydoo"}},
+		},
+		{
+			name: "use org/repo if defined",
+			configs: RerunAuthConfigs{
+				"*":           prowapi.RerunAuthConfig{GitHubUsers: []string{"clarketm"}},
+				"istio/istio": prowapi.RerunAuthConfig{GitHubUsers: []string{"skywalker"}},
+			},
+			refs:     &prowapi.Refs{Org: "istio", Repo: "istio"},
+			expected: prowapi.RerunAuthConfig{GitHubUsers: []string{"skywalker"}},
+		},
+		{
+			name: "org/repo takes precedence over org",
+			configs: RerunAuthConfigs{
+				"*":           prowapi.RerunAuthConfig{GitHubUsers: []string{"clarketm"}},
+				"istio":       prowapi.RerunAuthConfig{GitHubUsers: []string{"scrappydoo"}},
+				"istio/istio": prowapi.RerunAuthConfig{GitHubUsers: []string{"airbender"}},
+			},
+			refs:     &prowapi.Refs{Org: "istio", Repo: "istio"},
+			expected: prowapi.RerunAuthConfig{GitHubUsers: []string{"airbender"}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			if actual := tc.configs.GetRerunAuthConfig(tc.refs); !reflect.DeepEqual(actual, tc.expected) {
+				t.Errorf("Expected %v, got %v", tc.expected, actual)
+			}
+		})
+	}
+}
+
 func TestMergeCommitTemplateLoading(t *testing.T) {
 	var testCases = []struct {
 		name        string
@@ -2458,6 +2679,50 @@ func TestValidateComponentConfig(t *testing.T) {
 				}}}},
 			errExpected: true,
 		},
+		{
+			name: "Both RerunAuthConfig and RerunAuthConfigs are invalid, err",
+			config: &Config{ProwConfig: ProwConfig{Deck: Deck{
+				RerunAuthConfig:  &prowapi.RerunAuthConfig{AllowAnyone: true},
+				RerunAuthConfigs: RerunAuthConfigs{"*": prowapi.RerunAuthConfig{AllowAnyone: true}},
+			}}},
+			errExpected: true,
+		},
+		{
+			name: "RerunAuthConfig and not RerunAuthConfigs is valid, no err",
+			config: &Config{ProwConfig: ProwConfig{Deck: Deck{
+				RerunAuthConfig: &prowapi.RerunAuthConfig{AllowAnyone: false, GitHubUsers: []string{"grantsmith"}},
+			}}},
+			errExpected: false,
+		},
+		{
+			name: "RerunAuthConfig only and validation fails, err",
+			config: &Config{ProwConfig: ProwConfig{Deck: Deck{
+				RerunAuthConfig: &prowapi.RerunAuthConfig{AllowAnyone: true, GitHubUsers: []string{"grantsmith"}},
+			}}},
+			errExpected: true,
+		},
+		{
+			name: "RerunAuthConfigs and not RerunAuthConfig is valid, no err",
+			config: &Config{ProwConfig: ProwConfig{Deck: Deck{
+				RerunAuthConfigs: RerunAuthConfigs{
+					"*":                     prowapi.RerunAuthConfig{AllowAnyone: true},
+					"kubernetes":            prowapi.RerunAuthConfig{GitHubUsers: []string{"easterbunny"}},
+					"kubernetes/kubernetes": prowapi.RerunAuthConfig{GitHubOrgs: []string{"kubernetes", "kubernetes-sigs"}},
+				},
+			}}},
+			errExpected: false,
+		},
+		{
+			name: "RerunAuthConfigs only and validation fails, err",
+			config: &Config{ProwConfig: ProwConfig{Deck: Deck{
+				RerunAuthConfigs: RerunAuthConfigs{
+					"*":                     prowapi.RerunAuthConfig{AllowAnyone: true},
+					"kubernetes":            prowapi.RerunAuthConfig{GitHubUsers: []string{"easterbunny"}},
+					"kubernetes/kubernetes": prowapi.RerunAuthConfig{AllowAnyone: true, GitHubOrgs: []string{"kubernetes", "kubernetes-sigs"}},
+				},
+			}}},
+			errExpected: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -2652,7 +2917,41 @@ func TestSlackReporterValidation(t *testing.T) {
 		})
 	}
 }
+func TestManagedHmacEntityValidation(t *testing.T) {
+	testCases := []struct {
+		name       string
+		prowConfig Config
+		shouldFail bool
+	}{
+		{
+			name:       "Missing managed HmacEntities",
+			prowConfig: Config{ProwConfig: ProwConfig{ManagedWebhooks: nil}},
+			shouldFail: false,
+		},
+		{
+			name: "Config with all valid dates",
+			prowConfig: Config{ProwConfig: ProwConfig{ManagedWebhooks: map[string]ManagedWebhookInfo{"foo/bar": {TokenCreatedAfter: time.Now()},
+				"foo/baz": {TokenCreatedAfter: time.Now()}}}},
+			shouldFail: false,
+		},
+		{
+			name: "Config with one invalid dates",
+			prowConfig: Config{ProwConfig: ProwConfig{ManagedWebhooks: map[string]ManagedWebhookInfo{"foo/bar": {TokenCreatedAfter: time.Now()},
+				"foo/baz": {TokenCreatedAfter: time.Now().Add(time.Hour)}}}},
+			shouldFail: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 
+			err := tc.prowConfig.validateComponentConfig()
+			if tc.shouldFail != (err != nil) {
+				t.Errorf("%s: Unexpected outcome. Error expected %v, Error found %s", tc.name, tc.shouldFail, err)
+			}
+
+		})
+	}
+}
 func TestValidateTriggering(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -3350,48 +3649,6 @@ func TestSetPeriodicDecorationDefaults(t *testing.T) {
 		expected      *prowapi.DecorationConfig
 	}{
 		{
-			id: "extraRefs[0] not defined, no DefaultDecorationConfigs exists, changes from DefaultDecorationConfig expected",
-			config: &Config{
-				ProwConfig: ProwConfig{
-					Plank: Plank{
-						DefaultDecorationConfigs: map[string]*prowapi.DecorationConfig{
-							"*": {
-								UtilityImages: &prowapi.UtilityImages{
-									CloneRefs:  "clonerefs:test-by-*",
-									InitUpload: "initupload:test-by-*",
-									Entrypoint: "entrypoint:test-by-*",
-									Sidecar:    "sidecar:test-by-*",
-								},
-								GCSConfiguration: &prowapi.GCSConfiguration{
-									Bucket:       "test-bucket-by-*",
-									PathStrategy: "single-by-*",
-									DefaultOrg:   "org-by-*",
-									DefaultRepo:  "repo-by-*",
-								},
-								GCSCredentialsSecret: "credentials-gcs-by-*",
-							},
-						},
-					},
-				},
-			},
-			utilityConfig: UtilityConfig{Decorate: true},
-			expected: &prowapi.DecorationConfig{
-				UtilityImages: &prowapi.UtilityImages{
-					CloneRefs:  "clonerefs:test-by-*",
-					InitUpload: "initupload:test-by-*",
-					Entrypoint: "entrypoint:test-by-*",
-					Sidecar:    "sidecar:test-by-*",
-				},
-				GCSConfiguration: &prowapi.GCSConfiguration{
-					Bucket:       "test-bucket-by-*",
-					PathStrategy: "single-by-*",
-					DefaultOrg:   "org-by-*",
-					DefaultRepo:  "repo-by-*",
-				},
-				GCSCredentialsSecret: "credentials-gcs-by-*",
-			},
-		},
-		{
 			id: "extraRefs[0] not defined, changes from defaultDecorationConfigs[*] expected",
 			config: &Config{
 				ProwConfig: ProwConfig{
@@ -3469,21 +3726,6 @@ func TestSetPeriodicDecorationDefaults(t *testing.T) {
 								},
 								GCSCredentialsSecret: "credentials-gcs-by-org",
 							},
-						},
-						DefaultDecorationConfig: &prowapi.DecorationConfig{
-							UtilityImages: &prowapi.UtilityImages{
-								CloneRefs:  "clonerefs:test",
-								InitUpload: "initupload:test",
-								Entrypoint: "entrypoint:test",
-								Sidecar:    "sidecar:test",
-							},
-							GCSConfiguration: &prowapi.GCSConfiguration{
-								Bucket:       "test-bucket",
-								PathStrategy: "single",
-								DefaultOrg:   "org",
-								DefaultRepo:  "repo",
-							},
-							GCSCredentialsSecret: "credentials-gcs",
 						},
 					},
 				},
@@ -3825,6 +4067,100 @@ func TestInRepoConfigAllowsCluster(t *testing.T) {
 
 			if actual := cfg.InRepoConfigAllowsCluster(clusterName, tc.repoIdentifier); actual != tc.expectedResult {
 				t.Errorf("expected result %t, got result %t", tc.expectedResult, actual)
+			}
+		})
+	}
+}
+
+func TestGetDefaultDecorationConfigsThreadSafety(t *testing.T) {
+	const repo = "repo"
+	p := Plank{DefaultDecorationConfigs: map[string]*prowapi.DecorationConfig{
+		"*": {
+			GCSConfiguration: &prowapi.GCSConfiguration{
+				MediaTypes: map[string]string{"text": "text"},
+			},
+		},
+		repo: {
+			GCSConfiguration: &prowapi.GCSConfiguration{
+				MediaTypes: map[string]string{"text": "text"},
+			},
+		},
+	}}
+
+	s1 := make(chan struct{})
+	s2 := make(chan struct{})
+
+	go func() {
+		_ = p.GetDefaultDecorationConfigs(repo)
+		close(s1)
+	}()
+	go func() {
+		_ = p.GetDefaultDecorationConfigs(repo)
+		close(s2)
+	}()
+
+	<-s1
+	<-s2
+}
+
+func TestDefaultAndValidateReportTemplate(t *testing.T) {
+	testCases := []struct {
+		id          string
+		controller  *Controller
+		expected    *Controller
+		expectedErr bool
+	}{
+
+		{
+			id:         "no report_template or report_templates specified, no changes expected",
+			controller: &Controller{},
+			expected:   &Controller{},
+		},
+
+		{
+			id:         "only report_template specified, expected report_template[*]=report_template",
+			controller: &Controller{ReportTemplateString: "test template"},
+			expected: &Controller{
+				ReportTemplateString:  "test template",
+				ReportTemplateStrings: map[string]string{"*": "test template"},
+				ReportTemplates: map[string]*template.Template{
+					"*": func() *template.Template {
+						reportTmpl, _ := template.New("Report").Parse("test template")
+						return reportTmpl
+					}(),
+				},
+			},
+		},
+
+		{
+			id:         "only report_templates specified, expected direct conversion",
+			controller: &Controller{ReportTemplateStrings: map[string]string{"*": "test template"}},
+			expected: &Controller{
+				ReportTemplateStrings: map[string]string{"*": "test template"},
+				ReportTemplates: map[string]*template.Template{
+					"*": func() *template.Template {
+						reportTmpl, _ := template.New("Report").Parse("test template")
+						return reportTmpl
+					}(),
+				},
+			},
+		},
+
+		{
+			id:          "no '*' in report_templates specified, expected error",
+			controller:  &Controller{ReportTemplateStrings: map[string]string{"org": "test template"}},
+			expectedErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.id, func(t *testing.T) {
+			if err := defaultAndValidateReportTemplate(tc.controller); err != nil && !tc.expectedErr {
+				t.Fatalf("error not expected: %v", err)
+			}
+
+			if !reflect.DeepEqual(tc.controller, tc.expected) && !tc.expectedErr {
+				t.Fatalf("\nGot: %#v\nExpected: %#v", tc.controller, tc.expected)
 			}
 		})
 	}

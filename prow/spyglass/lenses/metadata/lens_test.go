@@ -25,6 +25,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	prowv1 "k8s.io/test-infra/prow/apis/prowjobs/v1"
 
 	k8sreporter "k8s.io/test-infra/prow/crier/reporters/gcs/kubernetes"
 )
@@ -119,7 +120,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						Containers: []v1.Container{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 							},
 						},
 					},
@@ -128,7 +129,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						ContainerStatuses: []v1.ContainerStatus{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 								Ready: false,
 								State: v1.ContainerState{
 									Terminated: &v1.ContainerStateTerminated{
@@ -144,7 +145,7 @@ func TestHintFromPodInfo(t *testing.T) {
 		},
 		{
 			name:     "stuck images are reported by name",
-			expected: `The test container could not start because it could not pull "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master". Check your images.`,
+			expected: `The test container could not start because it could not pull "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master". Check your images.`,
 			info: k8sreporter.PodReport{
 				Pod: &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -154,7 +155,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						Containers: []v1.Container{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 							},
 						},
 					},
@@ -163,7 +164,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						ContainerStatuses: []v1.ContainerStatus{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 								Ready: false,
 								State: v1.ContainerState{
 									Waiting: &v1.ContainerStateWaiting{
@@ -188,7 +189,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						Containers: []v1.Container{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 								VolumeMounts: []v1.VolumeMount{
 									{
 										Name:      "some-volume",
@@ -213,7 +214,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						ContainerStatuses: []v1.ContainerStatus{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 								Ready: false,
 								State: v1.ContainerState{
 									Waiting: &v1.ContainerStateWaiting{
@@ -245,7 +246,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						Containers: []v1.Container{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 							},
 						},
 					},
@@ -257,7 +258,7 @@ func TestHintFromPodInfo(t *testing.T) {
 			},
 		},
 		{
-			name:     "pod scheduled to an illegal node is reported",
+			name:     "pod that could not be scheduled is reported",
 			expected: "There are no nodes that your pod can schedule to - check your requests, tolerations, and node selectors (0/3 nodes are available: 3 node(s) didn't match node selector.)",
 			info: k8sreporter.PodReport{
 				Pod: &v1.Pod{
@@ -268,7 +269,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						Containers: []v1.Container{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 							},
 						},
 					},
@@ -297,7 +298,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						Containers: []v1.Container{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 							},
 						},
 					},
@@ -306,7 +307,7 @@ func TestHintFromPodInfo(t *testing.T) {
 						ContainerStatuses: []v1.ContainerStatus{
 							{
 								Name:  "test",
-								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200131-0997840-master",
+								Image: "gcr.io/k8s-testimages/kubekins-e2e:v20200428-06f6e3b-master",
 								Ready: false,
 								State: v1.ContainerState{
 									Waiting: &v1.ContainerStateWaiting{
@@ -334,6 +335,88 @@ func TestHintFromPodInfo(t *testing.T) {
 				t.Fatalf("Unexpected failed to marshal pod to JSON (this wasn't even part of the test!): %v", err)
 			}
 			result := hintFromPodInfo(b)
+			if result != tc.expected {
+				t.Errorf("Expected hint %q, but got %q", tc.expected, result)
+			}
+		})
+	}
+}
+
+func TestHintFromProwJob(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+		pj       prowv1.ProwJob
+	}{
+		{
+			name:     "errored job has its description reported",
+			expected: "Job execution failed: this is the description",
+			pj: prowv1.ProwJob{
+				Status: prowv1.ProwJobStatus{
+					State:       prowv1.ErrorState,
+					Description: "this is the description",
+				},
+			},
+		},
+		{
+			name:     "failed prowjob reports nothing",
+			expected: "",
+			pj: prowv1.ProwJob{
+				Status: prowv1.ProwJobStatus{
+					State:       prowv1.FailureState,
+					Description: "this is another description",
+				},
+			},
+		},
+		{
+			name:     "aborted prowjob reports nothing",
+			expected: "",
+			pj: prowv1.ProwJob{
+				Status: prowv1.ProwJobStatus{
+					State:       prowv1.AbortedState,
+					Description: "this is another description",
+				},
+			},
+		},
+		{
+			name:     "successful prowjob reports nothing",
+			expected: "",
+			pj: prowv1.ProwJob{
+				Status: prowv1.ProwJobStatus{
+					State:       prowv1.SuccessState,
+					Description: "this is another description",
+				},
+			},
+		},
+		{
+			name:     "pending prowjob reports nothing",
+			expected: "",
+			pj: prowv1.ProwJob{
+				Status: prowv1.ProwJobStatus{
+					State:       prowv1.PendingState,
+					Description: "this is another description",
+				},
+			},
+		},
+		{
+			name:     "triggered prowjob reports nothing",
+			expected: "",
+			pj: prowv1.ProwJob{
+				Status: prowv1.ProwJobStatus{
+					State:       prowv1.TriggeredState,
+					Description: "this is another description",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := json.Marshal(tc.pj)
+			if err != nil {
+				t.Fatalf("Unexpected failed to marshal prowjob to JSON (this wasn't even part of the test!): %v", err)
+			}
+			result := hintFromProwJob(b)
 			if result != tc.expected {
 				t.Errorf("Expected hint %q, but got %q", tc.expected, result)
 			}

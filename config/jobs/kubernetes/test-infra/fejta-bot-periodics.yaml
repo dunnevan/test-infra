@@ -9,7 +9,7 @@ periodics:
     testgrid-tab-name: api-review-help
   spec:
     containers:
-    - image: gcr.io/k8s-prow/commenter:v20200204-7e8cd997a
+    - image: gcr.io/k8s-prow/commenter:v20200429-134f66873
       command:
       - /app/robots/commenter/app.binary
       args:
@@ -55,7 +55,7 @@ periodics:
     testgrid-tab-name: cla
   spec:
     containers:
-    - image: gcr.io/k8s-prow/commenter:v20200204-7e8cd997a
+    - image: gcr.io/k8s-prow/commenter:v20200429-134f66873
       command:
       - /app/robots/commenter/app.binary
       args:
@@ -95,7 +95,7 @@ periodics:
     testgrid-tab-name: close
   spec:
     containers:
-    - image: gcr.io/k8s-prow/commenter:v20200204-7e8cd997a
+    - image: gcr.io/k8s-prow/commenter:v20200429-134f66873
       command:
       - /app/robots/commenter/app.binary
       args:
@@ -136,7 +136,7 @@ periodics:
     description: Automatically /retest for approved PRs that failed retesting
   spec:
     containers:
-    - image: gcr.io/k8s-prow/commenter:v20200204-7e8cd997a
+    - image: gcr.io/k8s-prow/commenter:v20200429-134f66873
       command:
       - /app/robots/commenter/app.binary
       args:
@@ -155,6 +155,7 @@ periodics:
         -label:needs-rebase
         -label:needs-ok-to-test
         -label:"cncf-cla: no"
+        repo:kubernetes/kops
         repo:kubernetes/kubernetes
         repo:kubernetes/test-infra
       - --token=/etc/token/bot-github-token
@@ -162,7 +163,7 @@ periodics:
         --comment=/retest
         This bot automatically retries jobs that failed/flaked on approved PRs (send feedback to [fejta](https://github.com/fejta)).
 
-        Review the [full test history](https://gubernator.k8s.io/pr/{{.Number}}) for this PR.
+        Review the [full test history](https://prow.k8s.io/pr-history/?org={{.Org}}&repo={{.Repo}}&pr={{.Number}}) for this PR.
 
         Silence the bot with an `/lgtm cancel` or `/hold` comment for consistent failures.
 
@@ -186,7 +187,7 @@ periodics:
     testgrid-tab-name: rotten
   spec:
     containers:
-    - image: gcr.io/k8s-prow/commenter:v20200204-7e8cd997a
+    - image: gcr.io/k8s-prow/commenter:v20200429-134f66873
       command:
       - /app/robots/commenter/app.binary
       args:
@@ -230,7 +231,7 @@ periodics:
     testgrid-tab-name: stale
   spec:
     containers:
-    - image: gcr.io/k8s-prow/commenter:v20200204-7e8cd997a
+    - image: gcr.io/k8s-prow/commenter:v20200429-134f66873
       command:
       - /app/robots/commenter/app.binary
       args:
@@ -304,7 +305,7 @@ periodics:
     testgrid-tab-name: enhancements-unfreeze
   spec:
     containers:
-    - image: gcr.io/k8s-prow/commenter:v20200204-7e8cd997a
+    - image: gcr.io/k8s-prow/commenter:v20200429-134f66873
       command:
       - /app/robots/commenter/app.binary
       args:

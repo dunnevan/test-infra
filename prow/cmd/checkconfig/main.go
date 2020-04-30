@@ -31,10 +31,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/yaml"
 
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	v1 "k8s.io/test-infra/prow/apis/prowjobs/v1"
 	"k8s.io/test-infra/prow/config"
 	"k8s.io/test-infra/prow/config/secret"
-	"k8s.io/test-infra/prow/errorutil"
 	needsrebase "k8s.io/test-infra/prow/external-plugins/needs-rebase/plugin"
 	"k8s.io/test-infra/prow/flagutil"
 	"k8s.io/test-infra/prow/github"
@@ -72,9 +72,9 @@ type options struct {
 	github flagutil.GitHubOptions
 }
 
-func reportWarning(strict bool, errs errorutil.Aggregate) {
-	for _, item := range errs.Strings() {
-		logrus.Warn(item)
+func reportWarning(strict bool, errs utilerrors.Aggregate) {
+	for _, item := range errs.Errors() {
+		logrus.Warn(item.Error())
 	}
 	if strict {
 		logrus.Fatal("Strict is set and there were warnings")
@@ -89,6 +89,7 @@ const (
 	mismatchedTideWarning        = "mismatched-tide"
 	mismatchedTideLenientWarning = "mismatched-tide-lenient"
 	tideStrictBranchWarning      = "tide-strict-branch"
+	tideContextPolicy            = "tide-context-policy"
 	nonDecoratedJobsWarning      = "non-decorated-jobs"
 	jobNameLengthWarning         = "long-job-names"
 	jobRefsDuplicationWarning    = "duplicate-job-refs"
@@ -103,6 +104,7 @@ const (
 var defaultWarnings = []string{
 	mismatchedTideWarning,
 	tideStrictBranchWarning,
+	tideContextPolicy,
 	mismatchedTideLenientWarning,
 	nonDecoratedJobsWarning,
 	jobNameLengthWarning,
@@ -174,7 +176,8 @@ func (o *options) gatherOptions(flag *flag.FlagSet, args []string) error {
 	flag.Var(&o.excludeWarnings, "exclude-warning", "Warnings to exclude. Use repeatedly to provide a list of warnings to exclude")
 	flag.BoolVar(&o.expensive, "expensive-checks", false, "If set, additional expensive warnings will be enabled")
 	flag.BoolVar(&o.strict, "strict", false, "If set, consider all warnings as errors.")
-	o.github.AddFlagsWithoutDefaultGitHubTokenPath(flag)
+	o.github.AddFlags(flag)
+	o.github.AllowAnonymous = true
 	if err := flag.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %v", err)
 	}
@@ -185,7 +188,7 @@ func (o *options) gatherOptions(flag *flag.FlagSet, args []string) error {
 }
 
 func main() {
-	logrusutil.ComponentInit("checkconfig")
+	logrusutil.ComponentInit()
 
 	o, err := parseOptions()
 	if err != nil {
@@ -317,8 +320,13 @@ func main() {
 			errs = append(errs, err)
 		}
 	}
+	if o.warningEnabled(tideContextPolicy) {
+		if err := validateTideContextPolicy(cfg); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	if len(errs) > 0 {
-		reportWarning(o.strict, errorutil.NewAggregate(errs...))
+		reportWarning(o.strict, utilerrors.NewAggregate(errs))
 		return
 	}
 
@@ -419,7 +427,7 @@ func validateURLs(c config.ProwConfig) error {
 		validationErrs = append(validationErrs, fmt.Errorf("status_error_link is not a valid url: %s", c.StatusErrorLink))
 	}
 
-	return errorutil.NewAggregate(validationErrs...)
+	return utilerrors.NewAggregate(validationErrs)
 }
 
 func validateUnknownFields(cfg interface{}, cfgBytes []byte, filePath string) error {
@@ -446,7 +454,7 @@ func validateJobRequirements(c config.JobConfig) error {
 		validationErrs = append(validationErrs, validatePeriodicJob(job))
 	}
 
-	return errorutil.NewAggregate(validationErrs...)
+	return utilerrors.NewAggregate(validationErrs)
 }
 
 func validatePresubmitJob(repo string, job config.Presubmit) error {
@@ -455,7 +463,7 @@ func validatePresubmitJob(repo string, job config.Presubmit) error {
 	if job.Agent == string(v1.KubernetesAgent) && len(job.Name) > validation.LabelValueMaxLength {
 		validationErrs = append(validationErrs, fmt.Errorf("name of Presubmit job %q (for repo %q) too long (should be at most 63 characters)", job.Name, repo))
 	}
-	return errorutil.NewAggregate(validationErrs...)
+	return utilerrors.NewAggregate(validationErrs)
 }
 
 func validatePostsubmitJob(repo string, job config.Postsubmit) error {
@@ -464,7 +472,7 @@ func validatePostsubmitJob(repo string, job config.Postsubmit) error {
 	if job.Agent == string(v1.KubernetesAgent) && len(job.Name) > validation.LabelValueMaxLength {
 		validationErrs = append(validationErrs, fmt.Errorf("name of Postsubmit job %q (for repo %q) too long (should be at most 63 characters)", job.Name, repo))
 	}
-	return errorutil.NewAggregate(validationErrs...)
+	return utilerrors.NewAggregate(validationErrs)
 }
 
 func validateJobExtraRefs(cfg config.JobConfig) error {
@@ -476,7 +484,7 @@ func validateJobExtraRefs(cfg config.JobConfig) error {
 			}
 		}
 	}
-	return errorutil.NewAggregate(validationErrs...)
+	return utilerrors.NewAggregate(validationErrs)
 }
 
 func validatePeriodicJob(job config.Periodic) error {
@@ -485,7 +493,7 @@ func validatePeriodicJob(job config.Periodic) error {
 	if job.Agent == string(v1.KubernetesAgent) && len(job.Name) > validation.LabelValueMaxLength {
 		validationErrs = append(validationErrs, fmt.Errorf("name of Periodic job %q too long (should be at most 63 characters)", job.Name))
 	}
-	return errorutil.NewAggregate(validationErrs...)
+	return utilerrors.NewAggregate(validationErrs)
 }
 
 func validateTideRequirements(cfg *config.Config, pcfg *plugins.Configuration, includeForbidden bool) error {
@@ -569,7 +577,7 @@ func validateTideRequirements(cfg *config.Config, pcfg *plugins.Configuration, i
 		validationErrs = append(validationErrs, err)
 	}
 
-	return errorutil.NewAggregate(validationErrs...)
+	return utilerrors.NewAggregate(validationErrs)
 }
 
 func newOrgRepoConfig(orgExceptions map[string]sets.String, repos sets.String) *orgRepoConfig {
@@ -758,7 +766,7 @@ func ensureValidConfiguration(plugin, label, verb string, tideSubSet, tideSuperS
 		configErrors = append(configErrors, fmt.Errorf("the following orgs or repos enable the %s plugin but do not %s the %s label for merging: %v", plugin, verb, label, notRequired))
 	}
 
-	return errorutil.NewAggregate(configErrors...)
+	return utilerrors.NewAggregate(configErrors)
 }
 
 func validateDecoratedJobs(cfg *config.Config) error {
@@ -807,7 +815,7 @@ func validateNeedsOkToTestLabel(cfg *config.Config) error {
 			}
 		}
 	}
-	return errorutil.NewAggregate(queryErrors...)
+	return utilerrors.NewAggregate(queryErrors)
 }
 
 func pluginsWithOwnersFile() string {
@@ -928,4 +936,50 @@ func validateInRepoConfig(cfg *config.Config, filePath, repoIdentifier string) e
 	}
 
 	return nil
+}
+
+func validateTideContextPolicy(cfg *config.Config) error {
+	// We can not know all possible branches without asking GitHub, so instead we verify
+	// all branches that are explicitly configured on any job. This will hopefully catch
+	// most cases.
+	allKnownOrgRepoBranches := map[string]sets.String{}
+	for orgRepo, jobs := range cfg.PresubmitsStatic {
+		if _, ok := allKnownOrgRepoBranches[orgRepo]; !ok {
+			allKnownOrgRepoBranches[orgRepo] = sets.String{}
+		}
+
+		for _, job := range jobs {
+			allKnownOrgRepoBranches[orgRepo].Insert(job.Branches...)
+		}
+	}
+
+	// We have to disableInRepoConfig for this check, else we will
+	// attempt to clone the repo if its enabled
+	originalInRepoConfig := cfg.InRepoConfig
+	cfg.InRepoConfig = config.InRepoConfig{}
+	defer func() { cfg.InRepoConfig = originalInRepoConfig }()
+
+	var errs []error
+	for orgRepo, branches := range allKnownOrgRepoBranches {
+		split := strings.Split(orgRepo, "/")
+		if n := len(split); n != 2 {
+			errs = append(errs, fmt.Errorf("expected to get two results when splitting string %s by '/', got %d", orgRepo, n))
+			continue
+		}
+		org, repo := split[0], split[1]
+
+		if branches.Len() == 0 {
+			// Make sure we always test at least one branch per repo
+			// to catch cases where ppl only have jobs with empty branch
+			// configs.
+			branches.Insert("master")
+		}
+		for _, branch := range branches.List() {
+			if _, err := cfg.GetTideContextPolicy(nil, org, repo, branch, nil, ""); err != nil {
+				errs = append(errs, fmt.Errorf("context policy for %s branch in %s/%s is invalid: %w", branch, org, repo, err))
+			}
+		}
+	}
+
+	return utilerrors.NewAggregate(errs)
 }

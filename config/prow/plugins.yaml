@@ -45,7 +45,6 @@ approve:
   - kubernetes/contrib
   - kubernetes/dashboard
   - kubernetes/dns
-  - kubernetes/enhancements
   - kubernetes/examples
   - kubernetes/federation
   - kubernetes/gengo
@@ -69,6 +68,7 @@ approve:
   require_self_approval: false
   lgtm_acts_as_approve: true
 - repos:
+  - kubernetes/enhancements
   - kubernetes/kops
   - kubernetes/kubernetes
   - kubernetes-client
@@ -84,6 +84,7 @@ approve:
   - kubernetes/org
   - kubernetes/repo-infra
   - kubernetes/test-infra
+  - kubernetes/cloud-provider-gcp
   require_self_approval: false
   ignore_review_state: false
 - repos:
@@ -117,6 +118,9 @@ label:
     - platform/gcp
     - platform/minikube
     - platform/other
+    - tide/merge-method-merge
+    - tide/merge-method-rebase
+    - tide/merge-method-squash
 
 lgtm:
 - repos:
@@ -148,20 +152,27 @@ blockades:
   - ^keps/
   explanation: "KEPs have been relocated to [kubernetes/enhancements](https://git.k8s.io/enhancements/)! Please submit any updates there."
 - repos:
+  - kubernetes/community
+  blockregexps:
+  - ^contributors/design-proposals/
+  explanation: "The Design Proposal process has been deprecated in favor of [Kubernetes Enhancement Proposals (KEP)](https://git.k8s.io/enhancements/). These documents are here for historical purposes only."
+- repos:
   - kubernetes/enhancements
   blockregexps:
   - ^keps/NEXT_KEP_NUMBER$
   explanation: "KEP numbers are obsolete. Please remove any changes to `NEXT_KEP_NUMBER` from this PR and ensure the KEP filename is the draft date and KEP title e.g., `YYYYMMDD-pony-controller.md`"
-# TODO(justaugustus): Remove this blockade after identifying jobs where release tooling is being leveraged and
-#                     reorganizing k/release to be more restrictive about who can approve changes.
-#                     Deadline: 8/8/19
-#                     ref:
-#                       - https://github.com/kubernetes/test-infra/pull/13328
-#                       - https://github.com/kubernetes/release/issues/816
+### DO NOT REMOVE ###
+# This blockade is intended to restrict the approval of changes to existing release tooling to k/release repo admins.
+# We should only consider removing it after all tools mentioned in the regex have been removed/replaced.
+# ref:
+# - Go refactor umbrella: https://github.com/kubernetes/release/issues/918
+# - deb/rpm refactor umbrella: https://github.com/kubernetes/release/issues/1027
+# - Initial k/release blockade PR: https://github.com/kubernetes/test-infra/pull/13328
+# - Issue on mitigating CI failures caused by k/release changes: https://github.com/kubernetes/release/issues/816
 - repos:
   - kubernetes/release
   blockregexps:
-  - ^anago|branchff|build\/|changelog-update|compile-release-tools|debian\/|find_green_build|gcb\/|gcbmgr|lib\/|prin|push-build.sh|release-notify|relnotes|rpm\/
+  - ^(anago|compile-release-tools|find_green_build|gcb\/|lib\/|prin|push-build.sh|release-notify|relnotes)
   explanation: "Changes to certain release tools can affect our ability to test, build, and release Kubernetes. This PR must be explicitly approved by SIG Release repo admins."
 
 blunderbuss:
@@ -224,36 +235,35 @@ slack:
     - k8s-ci-robot # future home of tide
     - k8s-release-robot # anago
     branch_whitelist:
-        release-1.14:
-            - aleksandra-malinowska # Patch Release Team
-            - dougm # Patch Release Team
-            - feiskyer # Patch Release Team
-            - hoegaarden # Patch Release Team
-            - idealhack # Patch Release Team
-            - tpepper # Patch Release Team
         release-1.15:
-            - aleksandra-malinowska # Patch Release Team
             - dougm # Patch Release Team
             - feiskyer # Patch Release Team
             - hoegaarden # Patch Release Team
             - idealhack # Patch Release Team
+            - justaugustus # Patch Release Team
             - tpepper # Patch Release Team
         release-1.16:
-            - aleksandra-malinowska # Patch Release Team
             - dougm # Patch Release Team
             - feiskyer # Patch Release Team
             - hoegaarden # Patch Release Team
             - idealhack # Patch Release Team
+            - justaugustus # Patch Release Team
             - tpepper # Patch Release Team
         release-1.17:
-            - aleksandra-malinowska # Patch Release Team
-            - bubblemelon # Branch Manager
+            - dougm # Patch Release Team
+            - feiskyer # Patch Release Team
+            - hoegaarden # Patch Release Team
+            - idealhack # Patch Release Team
+            - justaugustus # Patch Release Team
+            - tpepper # Patch Release Team
+        release-1.18:
             - cpanato # Branch Manager
             - dougm # Patch Release Team
             - feiskyer # Patch Release Team
             - hoegaarden # Patch Release Team
             - idealhack # Patch Release Team
-            - justaugustus # Branch Manager
+            - justaugustus # Patch Release Team
+            - saschagrunert # Branch Manager
             - tpepper # Patch Release Team
         feature-serverside-apply:
             - lavalamp # feature-serverside-apply "branch manager"
@@ -292,24 +302,28 @@ slack:
 
 milestone_applier:
   kubernetes/enhancements:
-    master: v1.18
+    master: v1.19
   kubernetes/kubernetes:
-    master: v1.18
+    master: v1.19
+    release-1.18: v1.18
     release-1.17: v1.17
     release-1.16: v1.16
     release-1.15: v1.15
-    release-1.14: v1.14
   kubernetes/release:
-    master: v1.18
+    master: v1.19
   kubernetes/sig-release:
-    master: v1.18
+    master: v1.19
   kubernetes/test-infra:
-    master: v1.18
+    master: v1.19
   kubernetes/kops:
     master: v1.18
     release-1.17: v1.17
     release-1.16: v1.16
     release-1.15: v1.15
+  kubernetes-sigs/cluster-api-provider-azure:
+    master: v0.5
+    release-0.4: v0.4
+    release-0.3: v0.3
 
 repo_milestone:
   # Default maintainer
@@ -482,6 +496,30 @@ require_matching_label:
   repo: cloud-provider-aws
   prs: true
   regexp: ^kind/
+- missing_label: needs-kind
+  org: kubernetes
+  repo: release
+  issues: true
+  prs: true
+  regexp: ^kind/
+- missing_label: needs-priority
+  org: kubernetes
+  repo: release
+  issues: true
+  prs: true
+  regexp: ^priority/
+- missing_label: needs-kind
+  org: kubernetes
+  repo: sig-release
+  issues: true
+  prs: true
+  regexp: ^kind/
+- missing_label: needs-priority
+  org: kubernetes
+  repo: sig-release
+  issues: true
+  prs: true
+  regexp: ^priority/
 
 retitle:
   allow_closed_issues: true
@@ -602,6 +640,7 @@ plugins:
   - stage
 
   kubernetes/kops:
+  - mergecommitblocker
   - milestone
   - milestoneapplier
 
@@ -624,14 +663,19 @@ plugins:
 
   kubernetes/release:
   - blockade
+  - mergecommitblocker
   - milestone
   - milestoneapplier
   - override
+  - release-note
+  - require-matching-label
 
   kubernetes/sig-release:
+  - mergecommitblocker
   - milestone
   - milestoneapplier
   - override
+  - require-matching-label
 
   kubernetes/system-validators:
   - milestone
@@ -779,6 +823,7 @@ plugins:
 
   kubernetes-sigs/cluster-api-provider-azure:
   - milestone
+  - milestoneapplier
   - milestonestatus
   - release-note
   - require-matching-label

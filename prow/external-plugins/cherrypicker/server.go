@@ -30,6 +30,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"k8s.io/test-infra/prow/config"
+	cherrypicker "k8s.io/test-infra/prow/external-plugins/cherrypicker/lib"
 	"k8s.io/test-infra/prow/git/v2"
 	"k8s.io/test-infra/prow/github"
 	"k8s.io/test-infra/prow/pluginhelp"
@@ -42,6 +44,7 @@ var cherryPickRe = regexp.MustCompile(`(?m)^(?:/cherrypick|/cherry-pick)\s+(.+)$
 var releaseNoteRe = regexp.MustCompile(`(?s)(?:Release note\*\*:\s*(?:<!--[^<>]*-->\s*)?` + "```(?:release-note)?|```release-note)(.+?)```")
 
 type githubClient interface {
+	AddLabel(org, repo string, number int, label string) error
 	AssignIssue(org, repo string, number int, logins []string) error
 	CreateComment(org, repo string, number int, comment string) error
 	CreateFork(org, repo string) error
@@ -57,7 +60,7 @@ type githubClient interface {
 }
 
 // HelpProvider construct the pluginhelp.PluginHelp for this plugin.
-func HelpProvider(enabledRepos []string) (*pluginhelp.PluginHelp, error) {
+func HelpProvider(_ []config.OrgRepo) (*pluginhelp.PluginHelp, error) {
 	pluginHelp := &pluginhelp.PluginHelp{
 		Description: `The cherrypick plugin is used for cherrypicking PRs across branches. For every successful cherrypick invocation a new PR is opened against the target branch and assigned to the requester. If the parent PR contains a release note, it is copied to the cherrypick PR.`,
 	}
@@ -85,6 +88,8 @@ type Server struct {
 	ghc  githubClient
 	log  *logrus.Entry
 
+	// Labels to apply to the cherrypicked PR.
+	labels []string
 	// Use prow to assign users to cherrypicked PRs.
 	prowAssignments bool
 	// Allow anybody to do cherrypicks.
@@ -99,7 +104,7 @@ type Server struct {
 
 // ServeHTTP validates an incoming webhook and puts it into the event channel.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	eventType, eventGUID, payload, ok, _ := github.ValidateWebhook(w, r, s.tokenGenerator())
+	eventType, eventGUID, payload, ok, _ := github.ValidateWebhook(w, r, s.tokenGenerator)
 	if !ok {
 		return
 	}
@@ -435,12 +440,11 @@ func (s *Server) handle(l *logrus.Entry, requestor string, comment *github.Issue
 
 	// Open a PR in GitHub.
 	title = fmt.Sprintf("[%s] %s", targetBranch, title)
-	cherryPickBody := fmt.Sprintf("This is an automated cherry-pick of #%d", num)
+	var cherryPickBody string
 	if s.prowAssignments {
-		cherryPickBody = fmt.Sprintf("%s\n\n/assign %s", cherryPickBody, requestor)
-	}
-	if releaseNote := releaseNoteFromParentPR(body); len(releaseNote) != 0 {
-		cherryPickBody = fmt.Sprintf("%s\n\n%s", cherryPickBody, releaseNote)
+		cherryPickBody = cherrypicker.CreateCherrypickBody(num, requestor, releaseNoteFromParentPR(body))
+	} else {
+		cherryPickBody = cherrypicker.CreateCherrypickBody(num, "", releaseNoteFromParentPR(body))
 	}
 
 	head := fmt.Sprintf("%s:%s", s.botName, newBranch)
@@ -454,6 +458,11 @@ func (s *Server) handle(l *logrus.Entry, requestor string, comment *github.Issue
 	s.log.WithFields(l.Data).Info(resp)
 	if err := s.createComment(org, repo, num, comment, resp); err != nil {
 		return err
+	}
+	for _, label := range s.labels {
+		if err := s.ghc.AddLabel(org, repo, createdNum, label); err != nil {
+			return err
+		}
 	}
 	if !s.prowAssignments {
 		if err := s.ghc.AssignIssue(org, repo, createdNum, []string{requestor}); err != nil {
