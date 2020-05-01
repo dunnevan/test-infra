@@ -112,7 +112,7 @@ func getLabelsFromGenericMatches(matches [][]string, additionalLabels []string, 
 			continue
 		}
 		if labelFilter.Has(strings.ToLower(parts[1])) {
-			labels = append(labels, parts[1])
+			labels = append(labels, strings.ToLower(parts[1])) //we check against repo labels ToLower
 		} else {
 			*invalidLabels = append(*invalidLabels, match[0])
 		}
