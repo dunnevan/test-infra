@@ -107,7 +107,7 @@ func getLabelsFromGenericMatches(matches [][]string, additionalLabels []string, 
 		labelFilter.Insert(strings.ToLower(l))
 	}
 	for _, match := range matches {
-		parts := strings.Split(strings.TrimSpace(match[0]), " ")
+		parts := strings.SplitN(strings.TrimSpace(match[0]), " ", 2) //our labels have spaces darn it!
 		if ((parts[0] != "/label") && (parts[0] != "/remove-label")) || len(parts) != 2 {
 			continue
 		}
