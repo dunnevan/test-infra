@@ -703,24 +703,24 @@ func makePipelineRun(pj prowjobv1.ProwJob) (*pipelinev1beta1.PipelineRun, error)
 	return &p, nil
 }
 
-func makePipelineGitParams(pj prowjobv1.ProwJob) []pipelinev1alpha1.Param {
+func makePipelineGitParams(pj prowjobv1.ProwJob) []pipelinev1beta1.Param {
 
-	params := make([]pipelinev1alpha1.Param, 0, len(pj.Spec.ExtraRefs)+4)
+	params := make([]pipelinev1beta1.Param, 0, len(pj.Spec.ExtraRefs)+4)
 
 	for i, extra := range pj.Spec.ExtraRefs {
 		params = append(
 			params,
-			pipelinev1alpha1.Param{
+			pipelinev1beta1.Param{
 				Name: fmt.Sprintf("git-extra-ref-%d", i),
-				Value: pipelinev1alpha1.ArrayOrString{
-					Type:      pipelinev1alpha1.ParamTypeString,
+				Value: pipelinev1beta1.ArrayOrString{
+					Type:      pipelinev1beta1.ParamTypeString,
 					StringVal: git(extra),
 				},
 			},
-			pipelinev1alpha1.Param{
+			pipelinev1beta1.Param{
 				Name: fmt.Sprintf("revision-extra-ref-%d", i),
-				Value: pipelinev1alpha1.ArrayOrString{
-					Type:      pipelinev1alpha1.ParamTypeString,
+				Value: pipelinev1beta1.ArrayOrString{
+					Type:      pipelinev1beta1.ParamTypeString,
 					StringVal: revision(extra),
 				},
 			},
@@ -731,31 +731,31 @@ func makePipelineGitParams(pj prowjobv1.ProwJob) []pipelinev1alpha1.Param {
 		ref := *ref
 		params = append(
 			params,
-			pipelinev1alpha1.Param{
+			pipelinev1beta1.Param{
 				Name: "git-implicit-ref",
-				Value: pipelinev1alpha1.ArrayOrString{
-					Type:      pipelinev1alpha1.ParamTypeString,
+				Value: pipelinev1beta1.ArrayOrString{
+					Type:      pipelinev1beta1.ParamTypeString,
 					StringVal: git(ref),
 				},
 			},
-			pipelinev1alpha1.Param{
+			pipelinev1beta1.Param{
 				Name: "revision-implicit-ref",
-				Value: pipelinev1alpha1.ArrayOrString{
-					Type:      pipelinev1alpha1.ParamTypeString,
+				Value: pipelinev1beta1.ArrayOrString{
+					Type:      pipelinev1beta1.ParamTypeString,
 					StringVal: revision(ref),
 				},
 			},
-			pipelinev1alpha1.Param{
+			pipelinev1beta1.Param{
 				Name: "git",
-				Value: pipelinev1alpha1.ArrayOrString{
-					Type:      pipelinev1alpha1.ParamTypeString,
+				Value: pipelinev1beta1.ArrayOrString{
+					Type:      pipelinev1beta1.ParamTypeString,
 					StringVal: git(ref),
 				},
 			},
-			pipelinev1alpha1.Param{
+			pipelinev1beta1.Param{
 				Name: "revision",
-				Value: pipelinev1alpha1.ArrayOrString{
-					Type:      pipelinev1alpha1.ParamTypeString,
+				Value: pipelinev1beta1.ArrayOrString{
+					Type:      pipelinev1beta1.ParamTypeString,
 					StringVal: revision(ref),
 				},
 			},
