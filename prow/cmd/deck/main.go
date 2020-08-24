@@ -277,6 +277,7 @@ func main() {
 	if err := o.Validate(); err != nil {
 		logrus.WithError(err).Fatal("Invalid options")
 	}
+	logrus.Infof("Options: %+v", o)
 
 	defer interrupts.WaitForGracefulShutdown()
 	pjutil.ServePProf(o.instrumentation.PProfPort)
@@ -579,6 +580,7 @@ func prodOnlyMain(cfg config.Getter, pluginAgent *plugins.ConfigAgent, authCfgGe
 
 	// Handles link to github
 	mux.HandleFunc("/github-link", HandleGitHubLink(o.github.Host, secure))
+	logrus.Infof("Github host during init: %s", o.github.Host)
 
 	// Enable Git OAuth feature if oauthURL is provided.
 	var goa *githuboauth.Agent
